@@ -10,7 +10,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    final user = authState.value;
+    final user = authState.valueOrNull;
 
     if (user == null) {
       return const Scaffold(body: Center(child: Text('Not logged in')));
@@ -40,7 +40,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  user.email,
+                  user.email ?? '',
                   style: TextStyle(color: Colors.grey[500]),
                 ),
                 const SizedBox(height: 8),

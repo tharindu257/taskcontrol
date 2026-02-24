@@ -12,7 +12,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    final user = authState.value;
+    final user = authState.valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -65,7 +65,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        user.email,
+                        user.email ?? '',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],

@@ -96,13 +96,19 @@ class ProjectsScreen extends ConsumerWidget {
                         return Card(
                           child: InkWell(
                             borderRadius: BorderRadius.circular(8),
-                            onTap: () {
-                              final boardId = project.boards?.isNotEmpty == true
-                                  ? project.boards!.first.id
-                                  : '';
-                              if (boardId.isNotEmpty) {
-                                context.go('/projects/${project.id}/board/$boardId');
-                              }
+                            onTap: () async {
+                              // List API doesn't include boards, so fetch project detail
+                              try {
+                                final service = ref.read(projectServiceProvider);
+                                final detail = await service.getProject(project.id);
+                                if (!context.mounted) return;
+                                final boardId = detail.boards?.isNotEmpty == true
+                                    ? detail.boards!.first.id
+                                    : null;
+                                if (boardId != null) {
+                                  context.go('/projects/${project.id}/board/$boardId');
+                                }
+                              } catch (_) {}
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(16),

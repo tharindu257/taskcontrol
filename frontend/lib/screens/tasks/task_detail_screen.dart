@@ -88,7 +88,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           // Header
           Row(
             children: [
-              IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.go('/projects/${task.projectId}/board/${task.boardId}'),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

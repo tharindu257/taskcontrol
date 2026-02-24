@@ -61,7 +61,9 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
         ref.invalidate(boardTasksProvider(widget.boardId!));
       }
 
-      if (mounted) context.pop();
+      if (mounted) {
+        context.go('/projects/${widget.projectId}/board/${widget.boardId}');
+      }
     } catch (e) {
       String message = 'Failed to create task.';
       if (e is DioException && e.response?.data != null) {
@@ -90,7 +92,13 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back),
-                        onPressed: () => context.pop(),
+                        onPressed: () {
+                          if (widget.boardId != null) {
+                            context.go('/projects/${widget.projectId}/board/${widget.boardId}');
+                          } else {
+                            context.go('/');
+                          }
+                        },
                       ),
                       const SizedBox(width: 8),
                       Text(
