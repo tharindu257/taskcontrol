@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum BoardType {
+  KANBAN
+}
+
+enum TaskType {
+  TASK
+  BUG
+  FEATURE
+  STORY
+}
+
+enum TaskStatus {
+  TO_DO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ActivityType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNEE_CHANGED
+  PRIORITY_CHANGED
+  LABEL_ADDED
+  LABEL_REMOVED
+  COMMENT_ADDED
+  COMMENT_EDITED
+  COMMENT_DELETED
+  TASK_EDITED
+}
+
+// ─── Models ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  fullName     String?
+  avatar       String?
+  role         UserRole @default(MEMBER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedProjects  Project[]       @relation("ProjectOwner")
+  memberships    ProjectMember[]
+  assignedTasks  Task[]          @relation("AssignedTo")
+  createdTasks   Task[]          @relation("CreatedBy")
+  comments       Comment[]
+  activities     Activity[]
+  refreshTokens  RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @db.VarChar(500)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Project {
+  id          String     @id @default(cuid())
+  key         String     @unique
+  name        String
+  description String?    @db.Text
+  ownerId     String
+  owner       User       @relation("ProjectOwner", fields: [ownerId], references: [id])
+  visibility  Visibility @default(PRIVATE)
+  taskCounter Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  members ProjectMember[]
+  boards  Board[]
+  tasks   Task[]
+  labels  Label[]
+
+  @@index([ownerId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      MemberRole @default(MEMBER)
+  joinedAt  DateTime   @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model Board {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  type      BoardType @default(KANBAN)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tasks Task[]
+
+  @@index([projectId])
+  @@map("boards")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boardId     String
+  board       Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  key         String
+  title       String
+  description String?    @db.Text
+  type        TaskType   @default(TASK)
+  status      TaskStatus @default(TO_DO)
+  priority    Priority   @default(MEDIUM)
+  creatorId   String
+  creator     User       @relation("CreatedBy", fields: [creatorId], references: [id])
+  assigneeId  String?
+  assignee    User?      @relation("AssignedTo", fields: [assigneeId], references: [id])
+  dueDate     DateTime?
+  position    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  labels     TaskLabel[]
+  comments   Comment[]
+  activities Activity[]
+
+  @@unique([projectId, key])
+  @@index([boardId])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@map("tasks")
+}
+
+model Label {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("#0052CC")
+  createdAt DateTime @default(now())
+
+  tasks TaskLabel[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("labels")
+}
+
+model TaskLabel {
+  id      String @id @default(cuid())
+  taskId  String
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, labelId])
+  @@map("task_labels")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String   @db.Text
+  edited    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@map("comments")
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  taskId    String?
+  task      Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  action    ActivityType
+  changes   Json?
+  createdAt DateTime     @default(now())
+
+  @@index([taskId])
+  @@map("activities")
+}
